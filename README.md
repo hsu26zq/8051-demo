@@ -2,5 +2,5 @@
 ### Structure
     .
     ├── final.asm                   # 8051 Assembly Code
-    ├── report                      # Report of this Project
+    ├── 8051_report                 # Slides of this Project
     └── README.md
