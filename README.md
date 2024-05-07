@@ -1,6 +1,6 @@
 # 8051-bluetooth-rc-car
 ### Structure
     .
-    ├── final.asm                   # 8051 assembly code
-    ├── report                      # report of this project
+    ├── final.asm                   # 8051 Assembly Code
+    ├── report                      # Report of this Project
     └── README.md
