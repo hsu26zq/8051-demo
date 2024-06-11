@@ -1,6 +1,6 @@
 # 8051-bluetooth-rc-car
 
-This is the final project of the course "Microprocessor" at CCU EE.
+This is the final project of the course 'Microprocessor' at CCU EE.
 
 Completion Date: *2022-12*
 
