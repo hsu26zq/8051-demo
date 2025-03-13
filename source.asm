@@ -3,7 +3,7 @@
 
 
 .org    0x0023 ;INTERRUPT VECTOR ADDRESS FOR "SERIAL"
-    setb 0x01
+    setb 0x01 ;INDICATE TO TURN OFF REPLAY
     clr ri
     reti ;BACK TO MAIN PROGRAM
 
@@ -16,11 +16,11 @@ INITIAL:
 
         ;init 82C55 
 		;(port A output,port B input)
-    mov	A, #0x82
-	mov	DPTR, #0xA003
+    mov	A, #0x82 ;CONTROL WORDS
+	mov	DPTR, #0xA003 ;HARDWARE-DEFINED, LEDS
     movx	@DPTR, A
-    mov	A, #0x80
-    mov DPTR, #0x9003
+    mov	A, #0x80 ;CONTROL WORDS
+    mov DPTR, #0x9003 ;HARDWARE-DEFINED, L298N
 	movx	@DPTR, A
 
         ;init serial port
@@ -59,34 +59,36 @@ MAIN:
         ;SPEED CONTROL
     jb acc.4, SPEED     ;0001 000X
 
-        ;ACTION MEMORIZING
-    jb acc.5, PLAY_LOOP ;0010 0000
+        ;PATH MEMORIZING
+    jb acc.5, REPLAY ;0010 0000
     jb acc.6, STOP      ;0100 0000  STOP must be placed before RECORD to avoid jump into RECORDING instantly
     jb acc.7, RECORD    ;1000 0000  restart RECROD during RECORDING
-    jb 0x00, RECORDING  
+    jb 0x00, RECORDING ;RECORD BEFORE PASS
 
         ;FORWARD, BACKWARD, LEFT, RIGHT
     jnb 0x00, PASS      ;0000 XXXX
 
-SPEED: ;CHANGE SPEED BY CHANGING PERIOD OF STOP, LONGER STOP TIME => LOWER SPEED
+SPEED: ;CHANGE SPEED BY CHANGING DURAION OF ON/OFF
+	   ;R3 == DURATION OF ON
+	   ;R4 == DURATION OF OFF
     jnb acc.0, SLOW
     ljmp FAST 
 
-    SLOW:
-        mov R3, #1;                  ________               ________
-        mov R4, #3;                 |        |             |        |
-        ljmp HERE ;                 |        |             |        |
-                  ;                 |        |             |        |
-    FAST:         ;                 |        |             |        |          . . . . . .
-        mov R3, #1;                 |        |             |        |
-        mov R4, #1;          _______|        |_____________|        |__________
-                  ;                  \  R3  / \     R4    /
+    SLOW:         ;                              SLOW                                                    FAST
+        mov R3, #1;              _______                      _______                            _______           _______
+        mov R4, #3;             |       |                    |       |                          |       |         |       |
+        ljmp HERE ;             |       |                    |       |                          |       |         |       |
+                  ;             |       |                    |       |                          |       |         |       |
+    FAST:         ;             |       |                    |       |       . . . . . .        |       |         |       |    . . . . . .
+        mov R3, #1;             |       |                    |       |                          |       |         |       |
+        mov R4, #1;      _______|       |____________________|       |__________         _______|       |_________|       |__________
+                  ;              \ R3  / \        R4        /                                   \  R3   /\   R4  /
     HERE:
         ljmp MAIN
 
-RECORD:
+RECORD: ;IF PRESS RECORD DURING RECORDING, RECORD FROM START
     setb 0x00 ;trigger record
-    mov DPTR, #0x0000
+    mov DPTR, #0x0000 ;EXTERNAL RAM
     push DPL
     push DPH
     ljmp MAIN
@@ -98,26 +100,26 @@ RECORD:
 
         pop DPH
         pop DPL
-        movx @DPTR, A
+        movx @DPTR, A ;STORE IN EXTERNAL RAM
         inc DPTR
         push DPL
         push DPH
 
 PASS: ;ALTERNATING POWER ON AND OFF
     mov DPTR, #0x9000
-    movx @DPTR, A
-    mov A, R3
-    acall _DELAY
-
-        ;BRAKE
-    mov A, #00000000b
-    movx @DPTR, A
-    mov A, R4
-    acall _Delay
+    movx @DPTR, A       ;
+    mov A, R3           ;                  ________               ________
+    acall _DELAY        ;                 |        |             |        |
+                        ;                 |        |             |        |
+        ;BRAKE          ;                 |        |             |        |
+    mov A, #00000000b   ;                 |        |             |        |          . . . . . .
+    movx @DPTR, A       ;                 |        |             |        |
+    mov A, R4           ;          _______|        |_____________|        |__________
+    acall _Delay        ;                  \  R3  / \     R4    /
 
     ljmp MAIN
 
-STOP:
+STOP: ;STOP RECORDING
     jnb 0x00, MAIN ;check if already off
 
     clr 0x00
@@ -136,7 +138,7 @@ STOP:
 ;************************************************************
 ;************************************************************
 
-PLAY_LOOP:
+REPLAY:
     jb 0x00, MAIN ;not allow to play in RECORDING mode
 
     mov DPTR, #0x0000
@@ -146,7 +148,7 @@ PLAY_LOOP:
     clr 0x01
     mov ie, #90h ;"INTERRUPT ENABLE". turn on serial interrupt (press any button to stop)
 
-    PLAYING:
+    REPLAYING:
             ;show on leds
         mov DPTR, #0xA000
         movx @DPTR, A
@@ -172,7 +174,7 @@ PLAY_LOOP:
 
         jb 0x01, EXIT ;jump out after interrupt
 
-        ljmp PLAYING
+        ljmp REPLAYING
     
     EXIT:
         mov ie, #00h ;turn off serial interrupt
