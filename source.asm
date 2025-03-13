@@ -1,11 +1,11 @@
-.org    0x0000
+.org    0x0000 ;INTERRUPT VECTOR ADDRESS FOR "RESET"
     ljmp INITIAL
 
 
-.org    0x0023
+.org    0x0023 ;INTERRUPT VECTOR ADDRESS FOR "SERIAL"
     setb 0x01
     clr ri
-    reti
+    reti ;BACK TO MAIN PROGRAM
 
 
 .org    0x0100
@@ -14,7 +14,8 @@ INITIAL:
     mov A, #30
 	acall	_DELAY  
 
-        ;init 82C55 (port A output,port B input)
+        ;init 82C55 
+		;(port A output,port B input)
     mov	A, #0x82
 	mov	DPTR, #0xA003
     movx	@DPTR, A
@@ -23,11 +24,14 @@ INITIAL:
 	movx	@DPTR, A
 
         ;init serial port
-    mov scon, #50h
-    mov tmoD, #20h
-    mov th1, #250
-    setb tr1
-    setb ti
+    mov scon, #50h ;SERIAL PORT MODE == 1, 8-bit UART,
+				   ;SET RI WHEN RECEIVE STOP BIT.
+    mov tmoD, #20h ;TIMER 1 MODE == 2,
+				   ;C/T == 0, INTERNAL CLOCK SOURCE,
+				   ;GATE == 0, SOFTWARE-CONTROLLED TIMER;
+    mov th1, #250 ;BAUD RATE 9600
+    setb tr1 ;TURN ON TIMER 1
+    ;setb ti
 
 ;************************************************************
 ;************************************************************
@@ -44,13 +48,13 @@ mov R4, #1 ;time of stopping
 clr 0x00 ;recording flag
 clr 0x01 ;interrupt flag
 clr ri
-clr ti
+;clr ti
 
 
 MAIN: 
-    JNB RI,MAIN
-    clr RI
-    mov A, SBUF
+    JNB RI,MAIN ;WAIT UNITL DATA IS READY."RI" INIDICATE THE DATA IS READY TO BE READ".
+    clr RI ;IF NOT CLEAR, IT WILL KEEP READING THE PREVIOUS VALUE
+    mov A, SBUF ;DATA FROM HC05
 
         ;SPEED CONTROL
     jb acc.4, SPEED     ;0001 000X
@@ -64,7 +68,7 @@ MAIN:
         ;FORWARD, BACKWARD, LEFT, RIGHT
     jnb 0x00, PASS      ;0000 XXXX
 
-SPEED:
+SPEED: ;CHANGE SPEED BY CHANGING PERIOD OF STOP, LONGER STOP TIME => LOWER SPEED
     jnb acc.0, SLOW
     ljmp FAST 
 
@@ -76,7 +80,7 @@ SPEED:
     FAST:         ;                 |        |             |        |          . . . . . .
         mov R3, #1;                 |        |             |        |
         mov R4, #1;          _______|        |_____________|        |__________
-                  ;                  \  R3  / \    R4   /
+                  ;                  \  R3  / \     R4    /
     HERE:
         ljmp MAIN
 
@@ -99,7 +103,7 @@ RECORD:
         push DPL
         push DPH
 
-PASS:
+PASS: ;ALTERNATING POWER ON AND OFF
     mov DPTR, #0x9000
     movx @DPTR, A
     mov A, R3
@@ -140,7 +144,7 @@ PLAY_LOOP:
     push DPH
 
     clr 0x01
-    mov ie, #90h ;turn on serial interrupt (press any button to stop)
+    mov ie, #90h ;"INTERRUPT ENABLE". turn on serial interrupt (press any button to stop)
 
     PLAYING:
             ;show on leds
