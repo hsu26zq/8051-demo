@@ -1,4 +1,4 @@
-.org    0x0000 ;INTERRUPT VECTOR ADDRESS FOR "RESET"
+.org    0x0000
     ljmp INITIAL
 
 
