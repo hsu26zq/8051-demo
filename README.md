@@ -1,6 +1,6 @@
 ## Structure
     .
-    ├── presentation.pdf             # Porject Presentation 
+    ├── demo.pdf             # Presentation 
     ├── source.asm                   # 8051 Assembly Code
     └── README.md
 
